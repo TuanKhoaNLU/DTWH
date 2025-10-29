@@ -1,0 +1,25 @@
+
+app:
+  run_mode: "production"         
+  storage_path: "/data/storage"  
+  max_items_per_run: 1000
+
+apify:
+  token: "${APIFY_TOKEN}"     
+  actor_id: "${APIFY_ACTOR}"   
+  default_input: {}           
+
+mysql:
+  host: "db"
+  port: 3306
+  user: "${MYSQL_USER}"
+  password: "${MYSQL_PASSWORD}"
+  database: "${MYSQL_DATABASE}"
+  connect_retries: 5
+  connect_retry_backoff: 5
+
+schedule:
+  enabled: false
+  cron: "0 8 * * *"        
+  timezone: "Asia/Ho_Chi_Minh"
+
