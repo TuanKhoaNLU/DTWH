@@ -90,3 +90,35 @@ CREATE TABLE IF NOT EXISTS fact_videos (
 CREATE INDEX idx_fact_videos_date ON fact_videos(dateKey);
 CREATE INDEX idx_fact_videos_author ON fact_videos(authorID);
 CREATE INDEX idx_dim_videos_author ON dim_videos(authorID);
+
+-- ------------------------------
+-- Staging schema for raw TikTok entities (Authors, Videos, Interactions)
+-- ------------------------------
+CREATE DATABASE IF NOT EXISTS dbStaging;
+-- Create tables according to the provided specification
+CREATE TABLE IF NOT EXISTS dbStaging.Authors (
+    authorID BIGINT PRIMARY KEY,
+    Name VARCHAR(255),
+    avatar TEXT
+);
+
+CREATE TABLE IF NOT EXISTS dbStaging.Videos (
+    videoID BIGINT PRIMARY KEY,
+    authorID BIGINT,
+    TextContent TEXT,
+    Duration INT,
+    CreateTime DATETIME,
+    WebVideoUrl TEXT,
+    FOREIGN KEY (authorID) REFERENCES dbStaging.Authors(authorID)
+);
+
+CREATE TABLE IF NOT EXISTS dbStaging.VideoInteractions (
+    interactionID BIGINT AUTO_INCREMENT PRIMARY KEY,
+    videoID BIGINT UNIQUE,
+    DiggCount INT,
+    PlayCount BIGINT,
+    ShareCount INT,
+    CommentCount INT,
+    CollectCount INT,
+    FOREIGN KEY (videoID) REFERENCES dbStaging.Videos(videoID)
+);
