@@ -3,12 +3,13 @@ services:
     image: mysql:8.0
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-dwh_tiktok}
+      MYSQL_USER: ${MYSQL_USER:-user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-dwhtiktok}
     volumes:
       - db_data:/var/lib/mysql
       - ./init_db:/docker-entrypoint-initdb.d:ro
+      - ./mysql/conf.d/custom.cnf:/etc/mysql/conf.d/custom.cnf:ro
     ports:
       - "3306:3306"
     networks:
@@ -22,6 +23,30 @@ services:
   crawler:
     build: ./services/crawler
     env_file: .env
+    environment:
+      MYSQL_HOST: ${MYSQL_HOST:-db}
+      MYSQL_PORT: ${MYSQL_PORT:-3306}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-dwh_tiktok}
+      MYSQL_USER: ${MYSQL_USER:-user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-dwhtiktok}
+    volumes:
+      - ./storage:/data/storage
+      - ./config.yml:/app/config.yml:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - tiktok_network
+
+  loader-staging:
+    build: ./services/loaderStaging
+    env_file: .env
+    environment:
+      MYSQL_DATABASE_STAGING: dbStaging
+      MYSQL_HOST: ${MYSQL_HOST:-db}
+      MYSQL_PORT: ${MYSQL_PORT:-3306}
+      MYSQL_USER: ${MYSQL_USER:-user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-dwhtiktok}
     volumes:
       - ./storage:/data/storage
       - ./config.yml:/app/config.yml:ro

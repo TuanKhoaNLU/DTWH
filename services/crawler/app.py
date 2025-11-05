@@ -6,7 +6,7 @@ import yaml
 import logging
 import pymysql
 import requests
-from datetime import datetime
+from datetime import datetime, timezone
 from apscheduler.schedulers.blocking import BlockingScheduler
 from dotenv import load_dotenv
 from apify_client import ApifyClient
@@ -19,6 +19,7 @@ with open(CONFIG_PATH, "r") as f:
 
 APIFY_TOKEN = os.getenv("APIFY_TOKEN") or cfg.get("apify", {}).get("token")
 APIFY_ACTOR = os.getenv("APIFY_ACTOR") or cfg.get("apify", {}).get("actor_id")
+APIFY_ENABLED = (cfg.get("apify", {}).get("enabled", True) is not False)
 DEVICE_ID = cfg.get("app", {}).get("device_id", "device-unknown")
 STORAGE_PATH = cfg.get("app", {}).get("storage_path", "/data/storage")
 
@@ -105,7 +106,7 @@ def log_to_db(status, message, total_record=0, error_message=None, id_config=Non
                 id_config,
                 message,  # file_name hoặc mô tả
                 status,
-                datetime.utcnow(),
+                datetime.now(timezone.utc),
                 total_record,
                 error_message
             ))
@@ -144,6 +145,26 @@ def run_actor(actor_id, apify_token, run_input):
     results = [item for item in client.dataset(dataset_id).iterate_items()]
     return run_id, dataset_id, results
 
+# ---- Fallback: load local JSON when Apify disabled or fails ----
+def load_local_latest():
+    try:
+        files = [f for f in os.listdir(STORAGE_PATH) if f.lower().endswith('.json')]
+        if not files:
+            return None, []
+        files.sort(reverse=True)
+        latest = files[0]
+        fpath = os.path.join(STORAGE_PATH, latest)
+        with open(fpath, 'r', encoding='utf-8') as fr:
+            try:
+                data = json.load(fr)
+            except json.JSONDecodeError:
+                fr.seek(0)
+                data = [json.loads(line) for line in fr if line.strip()]
+        return f"local-{latest}", (data if isinstance(data, list) else [data])
+    except Exception as ex:
+        logger.error("Failed to load local JSON: %s", ex)
+        return None, []
+
 # ---- Main job ----
 def job():
     try:
@@ -155,7 +176,7 @@ def job():
             logger.warning("Could not get id_config, using default = 1")
             id_config = 1
 
-        # 2️⃣ Run Apify actor
+        # 2️⃣ Run Apify actor (or fallback to local files)
         run_input = {
             "hashtags": ["fyp"],
             "resultsPerPage": 100,
@@ -166,12 +187,23 @@ def job():
             "scrapeRelatedVideos": False,
             "shouldDownloadVideos": False
         }
-
-        run_id, dataset_id, items = run_actor(APIFY_ACTOR, APIFY_TOKEN, run_input)
-        logger.info("Actor run completed: %s (%d items)", run_id, len(items))
+        items = []
+        run_id = None
+        if APIFY_ENABLED and APIFY_TOKEN and APIFY_ACTOR:
+            try:
+                run_id, dataset_id, items = run_actor(APIFY_ACTOR, APIFY_TOKEN, run_input)
+                logger.info("Actor run completed: %s (%d items)", run_id, len(items))
+            except Exception as apify_err:
+                logger.warning("Apify failed (%s). Falling back to local files.", apify_err)
+                run_id, items = load_local_latest()
+        else:
+            logger.info("Apify disabled or not configured. Loading local files.")
+            run_id, items = load_local_latest()
+        if not items:
+            raise RuntimeError("No data available from Apify or local storage")
 
         # 3️⃣ Save dataset to file
-        ts = datetime.now().strftime("%d%m%YT%H%M%SZ")
+        ts = datetime.now(timezone.utc).strftime("%d%m%YT%H%M%SZ")
         fname = f"{DEVICE_ID}_run_{ts}.json"
         fpath = os.path.join(STORAGE_PATH, fname)
         with open(fpath, "w", encoding="utf-8") as fw:
