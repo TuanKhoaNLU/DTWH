@@ -8,7 +8,6 @@ apify:
   token: "${APIFY_TOKEN}"     
   actor_id: "${APIFY_ACTOR}"   
   default_input: {}           
-  enabled: false               
 
 mysql:
   host: "db"
