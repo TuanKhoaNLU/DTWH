@@ -122,3 +122,32 @@ CREATE TABLE IF NOT EXISTS dbStaging.VideoInteractions (
     CollectCount INT,
     FOREIGN KEY (videoID) REFERENCES dbStaging.Videos(videoID)
 );
+
+CREATE DATABASE IF NOT EXISTS dbAgg;
+USE dbAgg;
+
+-- Bảng tổng hợp hiệu suất theo tác giả
+CREATE TABLE IF NOT EXISTS agg_author_performance (
+    s_key VARCHAR(64) PRIMARY KEY,
+    authorID BIGINT,
+    authorName VARCHAR(255),
+    totalViews BIGINT,
+    totalLikes BIGINT,
+    totalComments BIGINT,
+    totalShares BIGINT,
+    totalVideos INT,
+    avgViewsPerVideo DECIMAL(10,2)
+    );
+
+-- Bảng tổng hợp theo ngày
+CREATE TABLE IF NOT EXISTS agg_daily_performance (
+    s_key VARCHAR(64) PRIMARY KEY,
+    dateKey INT,
+    fullDate DATE,
+    dayName VARCHAR(32),
+    totalViews BIGINT,
+    totalLikes BIGINT,
+    totalComments BIGINT,
+    totalShares BIGINT,
+    totalVideos INT
+    );

@@ -2,6 +2,8 @@
 CREATE USER IF NOT EXISTS 'user'@'%' IDENTIFIED BY 'dwhtiktok';
 GRANT ALL PRIVILEGES ON dwh_tiktok.* TO 'user'@'%';
 GRANT ALL PRIVILEGES ON dbStaging.* TO 'user'@'%';
+GRANT ALL PRIVILEGES ON dbStaging.* TO 'user'@'%';
+GRANT ALL PRIVILEGES ON dbAgg.* TO 'user'@'%';
 FLUSH PRIVILEGES;
 
 
