@@ -1,13 +1,18 @@
+version: '3.8'
+
 services:
   db:
     image: mysql:8.0
+    restart: always  # <--- QUAN TRỌNG: Tự khởi động lại DB
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpass}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
     volumes:
       - db_data:/var/lib/mysql
+      # Mount thư mục chứa schema.sql và 01_create_user.sql vào đây
+      # Để MySQL tự tạo bảng khi chạy lần đầu
       - ./init_db:/docker-entrypoint-initdb.d:ro
     ports:
       - "3306:3306"
@@ -21,10 +26,15 @@ services:
 
   crawler:
     build: ./services/crawler
+    restart: always
     env_file: .env
+    environment:
+      - TZ=Asia/Ho_Chi_Minh
+      - MYSQL_HOST=db
+      - MYSQL_PORT=3306
     volumes:
       - ./storage:/data/storage
-      - ./config.yml:/app/config.yml:ro
+      - ./services/crawler/config.yml:/app/config.yml:ro
     depends_on:
       db:
         condition: service_healthy
@@ -36,5 +46,3 @@ networks:
 
 volumes:
   db_data:
-
-
